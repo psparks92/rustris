@@ -10,12 +10,18 @@ use crossterm::{
     QueueableCommand,  // Replace ExecutableCommand for queuing
 };
 use std::io::{stdout, Write}; // Added Write here
+use std::env;
 use std::time::Duration;
 use game::Game;
 use piece::get_blocks;
-use crate::piece::GamePiece;
+use crate::piece::{GamePiece,Direction};
+use crate::board::CellState;
 
 fn main() -> std::io::Result<()> {
+    let args: Vec<String> = env::args().collect();
+    let is_test_mode = args.contains(&"--test".to_string());
+    //todo: test mode logs instead of renders
+    //bug: pieces are saved to the left edge when added to the board
     terminal::enable_raw_mode()?;
     let mut stdout = stdout();
     let width = 10;
@@ -30,15 +36,26 @@ fn main() -> std::io::Result<()> {
                 }
             }
         }
-        let mut proposed_piece = game.current_piece.clone();
-        proposed_piece.position.y -= 1;
-        if game.is_valid(&proposed_piece) {
-            game.current_piece = proposed_piece;
+        if let Some(proposed_piece) = game.current_piece.move_piece(Direction::Down) {
+            if game.is_valid(&proposed_piece) {
+                game.current_piece = proposed_piece;
+            }
+            else {
+                game.add_current_piece();
+                game.current_piece = GamePiece::new_random();
+                // this doesn't seem to be all that accurate - we need to allow for blocks
+                // above the board when it spawns
+                if !game.is_valid(&game.current_piece.clone()) {
+                    game.running = false;
+                }
+            }
         }
         else {
             game.add_current_piece();
             game.current_piece = GamePiece::new_random();
-            // create new piece
+            if !game.is_valid(&game.current_piece.clone()) {
+                game.running = false;
+            }
         }
 
         stdout.queue(Clear(ClearType::All))?;
@@ -51,9 +68,17 @@ fn main() -> std::io::Result<()> {
                 stdout.queue(crossterm::style::Print(if is_block { "#" } else { "." }))?;
             }
         }
+        for y in (0..height).rev() {
+            stdout.queue(cursor::MoveTo(0, (height - 1 - y) as u16))?;
+            for x in 0..width {
+                if !matches!(game.board[y as usize][x as usize], CellState::Empty) {
+                    stdout.queue(crossterm::style::Print( "%" ))?;
+                }
+            }
+        }
         stdout.flush()?;
 
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(200));
     }
 
     stdout.queue(Clear(ClearType::All))?;

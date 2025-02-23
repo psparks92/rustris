@@ -1,5 +1,4 @@
 // src/piece.rs
-use rand::Rng;
 use rand::prelude::IndexedRandom;
 
 
@@ -23,6 +22,14 @@ pub enum Orientation {
 }
 
 #[derive(Debug, Clone)]
+pub enum Direction {
+    Right,
+    Down,
+    Left,
+    Rotate,
+}
+
+#[derive(Debug, Clone)]
 pub struct GamePiece {
     pub piece_type : Tetromino,
     pub orientation : Orientation,
@@ -38,16 +45,47 @@ impl GamePiece {
         Orientation::Left => Orientation::Up
         }
     }
-    fn move_down(&mut self){
-        self.position.y += 1
+    pub fn move_piece(&mut self, direction: Direction) -> Option<GamePiece> {
+        let mut new_piece = self.clone();
+        match direction {
+            Direction::Down => {
+                if new_piece.position.y > 0 && get_blocks(self).iter().all(|b| b.y > 0) {
+                    let mut new_piece = new_piece.clone();
+                    new_piece.position.y -= 1;
+                    Some(new_piece)
+                }
+                else {
+                    None
+                }
+            },
+            Direction::Left => {
+                if new_piece.position.x > 0 && get_blocks(self).iter().all(|b| b.x > 0) {
+                    let mut new_piece = new_piece.clone();
+                    new_piece.position.x -= 1;
+                    Some(new_piece)
+                }
+                else {
+                    None
+                }
+            },
+            Direction::Right => {
+                if new_piece.position.x < 9 {
+                    let mut new_piece = new_piece.clone();
+                    new_piece.position.x += 1;
+                    Some(new_piece)
+                }
+                else {
+                    None
+                }
+            },
+            Direction::Rotate => { new_piece.rotate(); Some(new_piece) }
+        }
     }
     pub fn new_random() -> GamePiece {
-        let mut rng = rand::rng();
-        let random_x = rng.random_range(1..8);
         GamePiece {
             piece_type: get_random_tetromino(),
             orientation: Orientation::Up,
-            position: Position{x:random_x, y:19}
+            position: Position{x:4, y:19}
         }
     }
 }
