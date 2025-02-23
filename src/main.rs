@@ -24,13 +24,20 @@ fn main() -> std::io::Result<()> {
                 }
             }
         }
-        if game.current_piece.position.y > 0 {
-            game.current_piece.position.y -= 1;
+        let mut proposed_piece = game.current_piece.clone();
+        proposed_piece.position.y -= 1;
+        if game.is_valid(&proposed_piece) {
+            game.current_piece = proposed_piece;
+        }
+        else {
+            game.add_current_piece();
+            game.current_piece = GamePiece::new_random();
+            // create new piece
         }
 
         stdout.queue(Clear(ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;
-        let blocks = get_blocks(game.current_piece.clone());
+        let blocks = get_blocks(&game.current_piece);
         for y in (0..height).rev() {
             stdout.queue(cursor::MoveTo(0, (height - 1 - y) as u16))?;
             for x in 0..width {
@@ -91,7 +98,20 @@ impl GamePiece {
         Orientation::Left => Orientation::Up
         }
     }
+    fn move_down(&mut self){
+        self.position.y += 1
+    }
+    fn new_random() -> GamePiece {
+        let mut rng = rand::rng();
+        let random_x = rng.random_range(1..8);
+        GamePiece {
+            piece_type: get_random_tetromino(),
+            orientation: Orientation::Up,
+            position: Position{x:random_x, y:19}
+        }
+    }
 }
+
 
 #[derive(Debug, Clone)]
 struct Position {
@@ -109,7 +129,7 @@ struct Game {
 impl Game {
     fn new() -> Self {
         let mut rng = rand::rng();
-        let random_x = rng.random_range(0..7);
+        let random_x = rng.random_range(1..8);
         Game {
             board : vec![vec![CellState::Empty;10];20],
             current_piece : GamePiece {
@@ -120,22 +140,24 @@ impl Game {
             running : true
         }
     }
-    fn is_valid(&self, piece: GamePiece) -> bool {
+    fn is_valid(&self, piece: &GamePiece) -> bool {
         for block in get_blocks(piece) {
             // make sure each block is not occupied and is not out of bounds
-            if !matches!(self.board[block.y as usize][block.x as usize], CellState::Empty) {
-                return false;
-            }
-            if block.x < 0 || block.x > 9 || block.y < 0 {
-                return false;
-            }
+            if block.x > 9 || block.y > 19 {return false;}
+            if !matches!(self.board[block.y as usize][block.x as usize], CellState::Empty) {return false;}
         }
         true
     }
-    fn add_piece(&mut self, piece: GamePiece) {
+    fn add_piece(&mut self, piece: &GamePiece) {
         let (r, g, b) = get_color(piece.piece_type);
         for block in get_blocks(piece) {
-            self.board[block.y as usize][block.x as usize] = CellState::Occupied {r, g, b};
+            self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
+        }
+    }
+    fn add_current_piece(&mut self) {
+        let (r, g, b) = get_color(self.current_piece.piece_type);
+        for block in get_blocks(&self.current_piece) {
+            self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
         }
     }
 }
@@ -157,7 +179,7 @@ fn get_random_tetromino() -> Tetromino {
     *types.choose(&mut rng).unwrap()
 }
 
-fn get_blocks(piece: GamePiece) -> Vec<Position> {
+fn get_blocks(piece: &GamePiece) -> Vec<Position> {
     let x = piece.position.x;
     let y = piece.position.y;
     match piece.piece_type {
