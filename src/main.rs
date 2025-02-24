@@ -13,13 +13,15 @@ use crossterm::{
 use game::Game;
 use piece::get_blocks;
 use std::env;
-use std::io::{stdout, Write}; // Added Write here
+use std::io::prelude::*;
+use std::io::{stdin, stdout, Write}; // Added Write here
 use std::time::Duration;
 use std::time::Instant;
 
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let is_test_mode = args.contains(&"--test".to_string());
+    let mut stdin = stdin();
     //todo: test mode logs instead of renders
     //bug: pieces are saved to the left edge when added to the board
     if !is_test_mode {
@@ -31,50 +33,60 @@ fn main() -> std::io::Result<()> {
     let mut game = Game::new();
     let drop_interval = Duration::from_millis(500);
     let mut last_drop = Instant::now();
+    let move_cooldown = Duration::from_millis(200);
+    let mut last_input = Instant::now();
+    let mut score: u32 = 0;
 
     while game.running {
-        if event::poll(Duration::from_millis(16))? {
+        let now = Instant::now();
+        if event::poll(Duration::from_millis(1))? {
+            // && now - last_input >= move_cooldown {
             if let event::Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => {
-                        game.running = false;
-                    }
-                    KeyCode::Left => {
-                        if let Some(proposed_piece) = game.current_piece.move_piece(Direction::Left)
-                        {
-                            if game.is_valid(&proposed_piece) {
-                                game.current_piece = proposed_piece;
+                if key.kind == event::KeyEventKind::Press {
+                    match key.code {
+                        KeyCode::Char('q') => {
+                            game.running = false;
+                        }
+                        KeyCode::Left | KeyCode::Char('h') => {
+                            if let Some(proposed_piece) =
+                                game.current_piece.move_piece(Direction::Left)
+                            {
+                                if game.is_valid(&proposed_piece) {
+                                    game.current_piece = proposed_piece;
+                                }
                             }
                         }
-                    }
-                    KeyCode::Right => {
-                        if let Some(proposed_piece) =
-                            game.current_piece.move_piece(Direction::Right)
-                        {
-                            if game.is_valid(&proposed_piece) {
-                                game.current_piece = proposed_piece;
+                        KeyCode::Right | KeyCode::Char('l') => {
+                            if let Some(proposed_piece) =
+                                game.current_piece.move_piece(Direction::Right)
+                            {
+                                if game.is_valid(&proposed_piece) {
+                                    game.current_piece = proposed_piece;
+                                }
                             }
                         }
-                    }
-                    KeyCode::Down => {
-                        if let Some(proposed_piece) = game.current_piece.move_piece(Direction::Down)
-                        {
-                            if game.is_valid(&proposed_piece) {
-                                game.current_piece = proposed_piece;
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            if let Some(proposed_piece) =
+                                game.current_piece.move_piece(Direction::Down)
+                            {
+                                if game.is_valid(&proposed_piece) {
+                                    game.current_piece = proposed_piece;
+                                }
                             }
                         }
-                    }
-                    KeyCode::Char(' ') => {
-                        if let Some(proposed_piece) =
-                            game.current_piece.move_piece(Direction::Rotate)
-                        {
-                            if game.is_valid(&proposed_piece) {
-                                game.current_piece = proposed_piece;
+                        KeyCode::Char(' ') | KeyCode::Char('k') => {
+                            if let Some(proposed_piece) =
+                                game.current_piece.move_piece(Direction::Rotate)
+                            {
+                                if game.is_valid(&proposed_piece) {
+                                    game.current_piece = proposed_piece;
+                                }
                             }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
+                last_input = now;
             }
         }
         let now = Instant::now();
@@ -84,7 +96,8 @@ fn main() -> std::io::Result<()> {
                 if game.is_valid(&proposed_piece) {
                     game.current_piece = proposed_piece;
                 } else {
-                    game.add_current_piece();
+                    let lines_cleared = game.add_current_piece();
+                    score += (lines_cleared * lines_cleared) as u32;
                     if is_test_mode {
                         println!("NEW PIECE");
                     }
@@ -96,6 +109,8 @@ fn main() -> std::io::Result<()> {
             } else {
                 game.add_current_piece();
                 game.current_piece = GamePiece::new_random();
+                let lines_cleared = game.add_current_piece();
+                score += (lines_cleared * lines_cleared) as u32;
                 if is_test_mode {
                     println!("NEW PIECE");
                 }
@@ -104,7 +119,6 @@ fn main() -> std::io::Result<()> {
                 }
             }
         }
-
         if is_test_mode {
             // simply print out which blocks are occupied on the game board
             println!("----------------------------------------");
@@ -135,13 +149,24 @@ fn main() -> std::io::Result<()> {
                         "."
                     }))?;
                 }
+                // print current piece type
+                // stdout.queue(crossterm::style::Print(
+                //     game.current_piece.piece_type.print(),
+                // ))?;
             }
+            stdout.queue(crossterm::style::Print(format!("   Score: {}", score)))?;
             stdout.flush()?;
         }
 
-        std::thread::sleep(Duration::from_millis(16));
+        std::thread::sleep(Duration::from_millis(1));
     }
-
+    stdout.queue(cursor::MoveTo(0, (height - 1 + 1) as u16))?;
+    stdout.queue(crossterm::style::Print(format!(
+        "Game over! Score: {}",
+        score
+    )))?;
+    stdout.flush()?;
+    let _ = stdin.read(&mut [0u8]).unwrap();
     if !is_test_mode {
         stdout.queue(Clear(ClearType::All))?;
         stdout.queue(cursor::MoveTo(0, 0))?;

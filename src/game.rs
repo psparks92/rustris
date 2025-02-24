@@ -25,7 +25,7 @@ impl Game {
         //todo - switch Position to i8 and just check for no negative values
         for block in get_blocks(piece) {
             // make sure each block is not occupied and is not out of bounds
-            if block.x > 9 || block.y > 19 {
+            if block.x < 0 || block.x > 9 || block.y < 0 || block.y > 19 {
                 return false;
             }
             if !matches!(
@@ -51,8 +51,9 @@ impl Game {
         }
         true
     }
-    pub fn add_current_piece(&mut self) {
+    pub fn add_current_piece(&mut self) -> u8 {
         let (r, g, b) = get_color(self.current_piece.piece_type);
+        let mut lines_cleared = 0;
         for block in get_blocks(&self.current_piece) {
             self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
         }
@@ -62,11 +63,13 @@ impl Game {
                 .iter()
                 .all(|c| matches!(c, CellState::Occupied { .. }))
             {
+                lines_cleared += 1;
                 self.clear_line(y_to_check);
             } else {
                 y_to_check += 1;
             }
         }
+        lines_cleared
     }
     fn clear_line(&mut self, row: u8) {
         for y in row..19 {

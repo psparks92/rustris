@@ -12,6 +12,20 @@ pub enum Tetromino {
     Z,
 }
 
+impl Tetromino {
+    pub fn print(&self) -> &str {
+        match self {
+            Tetromino::O => "O",
+            Tetromino::T => "T",
+            Tetromino::J => "J",
+            Tetromino::L => "L",
+            Tetromino::I => "I",
+            Tetromino::S => "S",
+            Tetromino::Z => "Z",
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Orientation {
     Up,
@@ -47,38 +61,12 @@ impl GamePiece {
     pub fn move_piece(&mut self, direction: Direction) -> Option<GamePiece> {
         let mut new_piece = self.clone();
         match direction {
-            Direction::Down => {
-                if new_piece.position.y > 0 && get_blocks(self).iter().all(|b| b.y > 0) {
-                    let mut new_piece = new_piece.clone();
-                    new_piece.position.y -= 1;
-                    Some(new_piece)
-                } else {
-                    None
-                }
-            }
-            Direction::Left => {
-                if new_piece.position.x > 0 && get_blocks(self).iter().all(|b| b.x > 0) {
-                    let mut new_piece = new_piece.clone();
-                    new_piece.position.x -= 1;
-                    Some(new_piece)
-                } else {
-                    None
-                }
-            }
-            Direction::Right => {
-                if new_piece.position.x < 9 {
-                    let mut new_piece = new_piece.clone();
-                    new_piece.position.x += 1;
-                    Some(new_piece)
-                } else {
-                    None
-                }
-            }
-            Direction::Rotate => {
-                new_piece.rotate();
-                Some(new_piece)
-            }
+            Direction::Down => new_piece.position.y -= 1,
+            Direction::Left => new_piece.position.x -= 1,
+            Direction::Right => new_piece.position.x += 1,
+            Direction::Rotate => new_piece.rotate(),
         }
+        Some(new_piece)
     }
     pub fn new_random() -> GamePiece {
         GamePiece {
@@ -91,8 +79,8 @@ impl GamePiece {
 
 #[derive(Debug, Clone)]
 pub struct Position {
-    pub x: u8,
-    pub y: u8,
+    pub x: i8,
+    pub y: i8,
 }
 
 impl Position {
@@ -141,7 +129,7 @@ pub fn get_blocks(piece: &GamePiece) -> Vec<Position> {
             Orientation::Up => vec![
                 Position { x, y },
                 Position { x: x - 1, y },
-                Position { x, y: y - 1 },
+                Position { x, y: y + 1 },
                 Position { x: x + 1, y },
             ],
             Orientation::Right => vec![
@@ -152,15 +140,15 @@ pub fn get_blocks(piece: &GamePiece) -> Vec<Position> {
             ],
             Orientation::Down => vec![
                 Position { x, y },
-                Position { x, y: y + 1 },
-                Position { x, y: y - 1 },
                 Position { x: x - 1, y },
+                Position { x: x + 1, y },
+                Position { x: x, y: y - 1 },
             ],
             Orientation::Left => vec![
                 Position { x, y },
                 Position { x: x - 1, y },
                 Position { x, y: y - 1 },
-                Position { x: x + 1, y },
+                Position { x, y: y + 1 },
             ],
         },
         Tetromino::J => match piece.orientation {
@@ -193,14 +181,14 @@ pub fn get_blocks(piece: &GamePiece) -> Vec<Position> {
             Orientation::Up => vec![
                 Position { x, y },
                 Position { x: x - 1, y },
-                Position { x: x - 1, y: y + 1 },
+                Position { x: x + 1, y: y + 1 },
                 Position { x: x + 1, y },
             ],
             Orientation::Right => vec![
                 Position { x, y },
                 Position { x, y: y - 1 },
                 Position { x, y: y + 1 },
-                Position { x: x + 1, y: y + 1 },
+                Position { x: x + 1, y: y - 1 },
             ],
             Orientation::Down => vec![
                 Position { x, y },
