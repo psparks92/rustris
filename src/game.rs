@@ -22,6 +22,7 @@ impl Game {
         }
     }
     pub fn is_valid(&self, piece: &GamePiece) -> bool {
+        //todo - switch Position to i8 and just check for no negative values
         for block in get_blocks(piece) {
             // make sure each block is not occupied and is not out of bounds
             if block.x > 9 || block.y > 19 {
@@ -39,10 +40,12 @@ impl Game {
     pub fn overlaps_occupied(&self, piece: &GamePiece) -> bool {
         for block in get_blocks(piece) {
             // make sure each block is not occupied and is not out of bounds
-            if !matches!(
-                self.board[block.y as usize][block.x as usize],
-                CellState::Empty
-            ) {
+            if block.y < 20
+                && !matches!(
+                    self.board[block.y as usize][block.x as usize],
+                    CellState::Empty
+                )
+            {
                 return false;
             }
         }
@@ -52,6 +55,27 @@ impl Game {
         let (r, g, b) = get_color(self.current_piece.piece_type);
         for block in get_blocks(&self.current_piece) {
             self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
+        }
+        let mut y_to_check = 0;
+        while y_to_check < 20 {
+            if self.board[y_to_check as usize]
+                .iter()
+                .all(|c| matches!(c, CellState::Occupied { .. }))
+            {
+                self.clear_line(y_to_check);
+            } else {
+                y_to_check += 1;
+            }
+        }
+    }
+    fn clear_line(&mut self, row: u8) {
+        for y in row..19 {
+            for x in 0..10 {
+                self.board[y as usize][x as usize] = self.board[(y + 1) as usize][x as usize]
+            }
+        }
+        for x in 0..10 {
+            self.board[19][x] = CellState::Empty;
         }
     }
     pub fn get_occupied_blocks(&self) -> Vec<Position> {
