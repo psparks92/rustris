@@ -7,6 +7,7 @@ pub struct Game {
     pub board: Vec<Vec<CellState>>,
     pub current_piece: GamePiece,
     pub running: bool,
+    pub score: u32,
 }
 
 impl Game {
@@ -19,6 +20,7 @@ impl Game {
                 position: Position { x: 4, y: 19 },
             },
             running: true,
+            score: 0,
         }
     }
     pub fn is_valid(&self, piece: &GamePiece) -> bool {
@@ -51,7 +53,7 @@ impl Game {
         }
         true
     }
-    pub fn add_current_piece(&mut self) -> u8 {
+    pub fn add_current_piece(&mut self) {
         let (r, g, b) = get_color(self.current_piece.piece_type);
         let mut lines_cleared = 0;
         for block in get_blocks(&self.current_piece) {
@@ -69,7 +71,7 @@ impl Game {
                 y_to_check += 1;
             }
         }
-        lines_cleared
+        self.score += lines_cleared * lines_cleared;
     }
     fn clear_line(&mut self, row: u8) {
         for y in row..19 {

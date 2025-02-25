@@ -35,7 +35,6 @@ fn main() -> std::io::Result<()> {
     let mut last_drop = Instant::now();
     let move_cooldown = Duration::from_millis(200);
     let mut last_input = Instant::now();
-    let mut score: u32 = 0;
 
     while game.running {
         let now = Instant::now();
@@ -97,7 +96,6 @@ fn main() -> std::io::Result<()> {
                     game.current_piece = proposed_piece;
                 } else {
                     let lines_cleared = game.add_current_piece();
-                    score += (lines_cleared * lines_cleared) as u32;
                     if is_test_mode {
                         println!("NEW PIECE");
                     }
@@ -110,7 +108,6 @@ fn main() -> std::io::Result<()> {
                 game.add_current_piece();
                 game.current_piece = GamePiece::new_random();
                 let lines_cleared = game.add_current_piece();
-                score += (lines_cleared * lines_cleared) as u32;
                 if is_test_mode {
                     println!("NEW PIECE");
                 }
@@ -154,7 +151,7 @@ fn main() -> std::io::Result<()> {
                 //     game.current_piece.piece_type.print(),
                 // ))?;
             }
-            stdout.queue(crossterm::style::Print(format!("   Score: {}", score)))?;
+            stdout.queue(crossterm::style::Print(format!("   Score: {}", game.score)))?;
             stdout.flush()?;
         }
 
@@ -163,7 +160,7 @@ fn main() -> std::io::Result<()> {
     stdout.queue(cursor::MoveTo(0, (height - 1 + 1) as u16))?;
     stdout.queue(crossterm::style::Print(format!(
         "Game over! Score: {}",
-        score
+        game.score
     )))?;
     stdout.flush()?;
     let _ = stdin.read(&mut [0u8]).unwrap();
