@@ -19,7 +19,7 @@ use piece::{get_blocks, get_color};
 fn main() -> GameResult {
     let (ctx, event_loop) = ContextBuilder::new("rustris", "Peter Sparks")
         .window_setup(ggez::conf::WindowSetup::default().title("Rustris"))
-        .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 600.0))
+        .window_mode(ggez::conf::WindowMode::default().dimensions(800.0, 900.0))
         .build()?;
     let game = Game::new();
     run(ctx, event_loop, game)
@@ -27,19 +27,17 @@ fn main() -> GameResult {
 
 impl ggez::event::EventHandler for Game {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
-        if ctx.time.check_update_time(500) {
+        if self.running && ctx.time.check_update_time(self.speed) {
             if let Some(new_piece) = self.current_piece.move_piece(Direction::Down) {
                 if self.is_valid(&new_piece) {
                     self.current_piece = new_piece.clone();
                 } else {
                     self.add_current_piece();
                     self.current_piece = GamePiece::new_random();
-                    if !self.is_valid(&self.current_piece) {
+                    if !self.overlaps_occupied(&self.current_piece) {
                         self.running = false;
                     }
                 }
-            } else {
-                self.running = false;
             }
         }
         Ok(())
@@ -47,8 +45,19 @@ impl ggez::event::EventHandler for Game {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
         let mut canvas = Canvas::from_frame(ctx, Color::BLACK);
-        let block_size = 20;
+        let block_size = 40.0;
         let piece_blocks = get_blocks(&self.current_piece);
+        let outline_color = Color::from_rgb(200, 200, 200); // Light gray
+
+        // Draw board outline
+        let board_rect = Rect::new(0.0, 0.0, 10.0 * block_size, 20.0 * block_size);
+        let board_outline = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::stroke(2.0), // 2px thick
+            board_rect,
+            outline_color,
+        )?;
+        canvas.draw(&board_outline, DrawParam::default().dest([0.0, 0.0])); // Top-left corner
         for y in 0..20 {
             for x in 0..10 {
                 let (piece_r, piece_g, piece_b) = get_color(self.current_piece.piece_type);
@@ -75,18 +84,25 @@ impl ggez::event::EventHandler for Game {
             }
         }
         // Draw score (example)
-        let score_text = graphics::Text::new(format!("Score: {}", self.score));
+        // Score text
+        let score_text = graphics::Text::new(
+            graphics::TextFragment::new(format!("Score: {}, Speed: {}", self.score, self.speed))
+                .scale(graphics::PxScale::from(32.0)), // ~2x default size
+        );
         canvas.draw(
             &score_text,
-            DrawParam::default().dest([10.0, 10.0]).color(Color::WHITE),
+            DrawParam::default().dest([480.0, 20.0]).color(Color::WHITE),
         );
 
         if !self.running {
-            let game_over = graphics::Text::new(format!("Game Over\nScore: {}", self.score));
+            let game_over = graphics::Text::new(
+                graphics::TextFragment::new(format!("Game over! Score: {}", self.score))
+                    .scale(graphics::PxScale::from(48.0)), // ~2x default size
+            );
             canvas.draw(
                 &game_over,
                 DrawParam::default()
-                    .dest([150.0, 300.0])
+                    .dest([520.0, 300.0])
                     .color(Color::WHITE),
             );
         }

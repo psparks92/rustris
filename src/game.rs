@@ -8,6 +8,8 @@ pub struct Game {
     pub current_piece: GamePiece,
     pub running: bool,
     pub score: u32,
+    pub speed: u32,
+    pieces_placed: u32,
 }
 
 impl Game {
@@ -21,6 +23,8 @@ impl Game {
             },
             running: true,
             score: 0,
+            speed: 2,
+            pieces_placed: 0,
         }
     }
     pub fn is_valid(&self, piece: &GamePiece) -> bool {
@@ -54,10 +58,16 @@ impl Game {
         true
     }
     pub fn add_current_piece(&mut self) {
+        self.pieces_placed += 1;
+        if self.pieces_placed % 3 == 0 {
+            self.speed += 1;
+        }
         let (r, g, b) = get_color(self.current_piece.piece_type);
         let mut lines_cleared = 0;
         for block in get_blocks(&self.current_piece) {
-            self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
+            if block.y < 20 && block.x < 10 {
+                self.board[block.y as usize][block.x as usize] = CellState::Occupied { r, g, b };
+            }
         }
         let mut y_to_check = 0;
         while y_to_check < 20 {
