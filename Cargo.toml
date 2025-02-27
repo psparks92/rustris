@@ -7,3 +7,5 @@ edition = "2021"
 rand = "0.9.0"
 crossterm = "0.28.1"
 ggez = "0.9"
+scrap = "0.5" # For AI screen capture
+enigo = "0.1" # For AI key simulation
