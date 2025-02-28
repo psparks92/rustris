@@ -127,6 +127,17 @@ impl ggez::event::EventHandler for Game {
                         }
                     }
                 }
+                KeyCode::Up => {
+                    if let Some(mut proposed) = self.current_piece.move_piece(Direction::Down) {
+                        while self.is_valid(&proposed) {
+                            self.current_piece = proposed;
+                            proposed = self
+                                .current_piece
+                                .move_piece(Direction::Down)
+                                .expect("failed to move piece");
+                        }
+                    }
+                }
                 KeyCode::Space => {
                     if let Some(proposed) = self.current_piece.move_piece(Direction::Rotate) {
                         if self.is_valid(&proposed) {
